@@ -99,8 +99,11 @@ const replaceImage = async ({
   $
 }) => {
   // find the full size image that matches, throw away WP resizes
-  const parsedUrlData = parseWPImagePath(thisImg.attr("src"));
-  const url = parsedUrlData.cleanUrl;
+  // const parsedUrlData = parseWPImagePath(thisImg.attr("src"));
+
+  // const url = parsedUrlData.cleanUrl;
+  const url = thisImg.attr("src");
+  // console.log(url)
   const imageNode = await downloadMediaFile({
     url,
     cache,
@@ -109,87 +112,89 @@ const replaceImage = async ({
     createNodeId
   });
   if (!imageNode) return;
-  let classes = thisImg.attr("class");
-  let formattedImgTag = {};
-  formattedImgTag.url = thisImg.attr(`src`);
-  formattedImgTag.classList = classes ? classes.split(" ") : [];
-  formattedImgTag.title = thisImg.attr(`title`);
-  formattedImgTag.alt = thisImg.attr(`alt`);
-  if (parsedUrlData.width) formattedImgTag.width = parsedUrlData.width;
-  if (parsedUrlData.height) formattedImgTag.height = parsedUrlData.height;
-  if (!formattedImgTag.url) return;
-  const fileType = imageNode.ext; // Ignore gifs as we can't process them,
-  // svgs as they are already responsive by definition
+  // console.log(imageNode)
+  // let classes = thisImg.attr("class");
+  // let formattedImgTag = {};
+  // formattedImgTag.url = thisImg.attr(`src`);
+  // formattedImgTag.classList = classes ? classes.split(" ") : [];
+  // formattedImgTag.title = thisImg.attr(`title`);
+  // formattedImgTag.alt = thisImg.attr(`alt`);
+  // if (parsedUrlData.width) formattedImgTag.width = parsedUrlData.width;
+  // if (parsedUrlData.height) formattedImgTag.height = parsedUrlData.height;
+  // if (!formattedImgTag.url) return;
+  // const fileType = imageNode.ext; // Ignore gifs as we can't process them,
+  // // svgs as they are already responsive by definition
 
-  if (fileType !== `gif` && fileType !== `svg`) {
-    const rawHTML = await generateImagesAndUpdateNode({
-      formattedImgTag,
-      imageNode,
-      options,
-      cache,
-      reporter,
-      $
-    }); // Replace the image string
+  // if (fileType !== `gif` && fileType !== `svg`) {
+  //   const rawHTML = await generateImagesAndUpdateNode({
+  //     formattedImgTag,
+  //     imageNode,
+  //     options,
+  //     cache,
+  //     reporter,
+  //     $
+  //   }); // Replace the image string
 
-    if (rawHTML) thisImg.replaceWith(rawHTML);
-  }
+  //   if (rawHTML) thisImg.replaceWith(rawHTML);
+  // }
 }; // Takes a node and generates the needed images and then returns
 // the needed HTML replacement for the image
 
 
-const generateImagesAndUpdateNode = async function ({
-  formattedImgTag,
-  imageNode,
-  options,
-  cache,
-  reporter,
-  $
-}) {
-  if (!imageNode || !imageNode.absolutePath) return;
-  let fluidResultWebp;
-  let fluidResult = await fluid({
-    file: imageNode,
-    args: { ...options,
-      maxWidth: formattedImgTag.width || options.maxWidth
-    },
-    reporter,
-    cache
-  });
+// const generateImagesAndUpdateNode = async function ({
+//   formattedImgTag,
+//   imageNode,
+//   options,
+//   cache,
+//   reporter,
+//   $
+// }) {
+//   if (!imageNode || !imageNode.absolutePath) return;
+//   let fluidResultWebp;
+//   let fluidResult = await fluid({
+//     file: imageNode,
+//     args: { ...options,
+//       maxWidth: formattedImgTag.width || options.maxWidth
+//     },
+//     reporter,
+//     cache
+//   });
 
-  if (options.withWebp) {
-    fluidResultWebp = await fluid({
-      file: imageNode,
-      args: { ...options,
-        maxWidth: formattedImgTag.width || options.maxWidth,
-        toFormat: 'WEBP'
-      },
-      reporter,
-      cache
-    });
-  }
+//   if (options.withWebp) {
+//     fluidResultWebp = await fluid({
+//       file: imageNode,
+//       args: { ...options,
+//         maxWidth: formattedImgTag.width || options.maxWidth,
+//         toFormat: 'WEBP'
+//       },
+//       reporter,
+//       cache
+//     });
+//   }
 
-  if (!fluidResult) return;
+//   if (!fluidResult) return;
 
-  if (options.withWebp) {
-    fluidResult.srcSetWebp = fluidResultWebp.srcSet;
-  }
+//   if (options.withWebp) {
+//     fluidResult.srcSetWebp = fluidResultWebp.srcSet;
+//   }
 
-  const imgOptions = {
-    fluid: fluidResult,
-    style: {
-      maxWidth: "100%"
-    },
-    // Force show full image instantly
-    critical: true,
-    // fadeIn: true,
-    imgStyle: {
-      opacity: 1
-    }
-  };
-  if (formattedImgTag.width) imgOptions.style.width = formattedImgTag.width;
-  const ReactImgEl = React.createElement(Img.default, imgOptions, null);
-  return ReactDOMServer.renderToString(ReactImgEl);
-};
+//   const imgOptions = {
+//     fluid: fluidResult,
+//     style: {
+//       maxWidth: "100%"
+//     },
+//     // Force show full image instantly
+//     // critical: true,
+//     loading: "lazy",
+//     // fadeIn: true,
+//     imgStyle: {
+//       opacity: 1
+//     }
+//   };
+//   if (formattedImgTag.width) imgOptions.style.width = formattedImgTag.width;
+//   const ReactImgEl = React.createElement(Img.default, imgOptions, null);
+//   return ReactDOMServer.renderToString(ReactImgEl);
+// };
 
 const downloadMediaFile = async ({
   url,
@@ -217,6 +222,8 @@ const downloadMediaFile = async ({
       cache,
       createNode,
       createNodeId
+    }).catch(err => {
+      console.log('Error creatingRemoteFileNode inline-images', err);
     }); // auth: _auth,
     // if (fileNode) {
     //   fileNodeID = fileNode.id
@@ -225,7 +232,9 @@ const downloadMediaFile = async ({
     //   //   modified: e.modified,
     //   // })
     // }
-  } catch (e) {} // Ignore
+  } catch (e) {
+    console.log('Error downloading content images', e);
+  } // Ignore
   // }
 
 
